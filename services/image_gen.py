@@ -21,8 +21,8 @@ import os
 import requests
 import urllib.parse
 
-from moderation import moderate_image_prompt, RiskLevel
-from prompt_rewriter import generate_image_prompt  # FIX: was from ai_engine (circular)
+from safety.moderation import moderate_image_prompt, RiskLevel
+from services.prompt_rewriter import generate_image_prompt  # FIX: was from ai_engine (circular)
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────

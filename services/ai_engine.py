@@ -21,7 +21,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 # Import retrieval layer
-from scripture_retrival import (
+from retrieval.scripture_retrival import (
     retrieve_scripture_context,
     format_context_block,
     validate_book_name,

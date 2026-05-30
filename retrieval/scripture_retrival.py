@@ -25,8 +25,11 @@ import re
 from typing import Optional
 
 # ── Load dataset once at import time ─────────────────────────────────────────
+# Project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-_DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "bible.json")
+# data/bible.json
+_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "bible.json")
 
 with open(_DATA_PATH, "r", encoding="utf-8") as _f:
     _BIBLE_DATA: dict = json.load(_f)
