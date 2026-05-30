@@ -17,16 +17,14 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import streamlit as st
-from moderation import moderate_message, moderate_image_prompt, RiskLevel
-from ai_engine import chat, generate_christian_content, verify_verse_claim, handle_difficult_theology
-from scripture_retrival import (
+from safety.moderation import moderate_message, moderate_image_prompt, RiskLevel
+from services.ai_engine import chat, generate_christian_content, verify_verse_claim, handle_difficult_theology
+from retrieval.scripture_retrival import (
     retrieve_scripture_context,
-    validate_book_name,
-    validate_verse_ref,
-    get_all_topics,
+    validate_book_name
 )
-from scripture import extract_verse_refs, get_denomination_context
-from image_gen import generate_christian_image, EXAMPLE_IMAGE_PROMPTS
+from retrieval.scripture import extract_verse_refs, get_denomination_context
+from services.image_gen import generate_christian_image, EXAMPLE_IMAGE_PROMPTS
 from data.dataset import EVAL_DATASET, run_moderation_eval
 
 # ─────────────────────────────────────────────────────────────────────────────
