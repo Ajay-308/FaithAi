@@ -25,7 +25,7 @@ from safety.moderation import moderate_image_prompt, RiskLevel
 from services.prompt_rewriter import generate_image_prompt  # FIX: was from ai_engine (circular)
 
 
-# ── Constants ─────────────────────────────────────────────────────────────────
+#  Constants 
 
 STYLE_SUFFIX = (
     "classical Christian art style, Renaissance painting, warm golden light, "
@@ -37,7 +37,7 @@ POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}"
 STABILITY_API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
 
 
-# ── Main pipeline ─────────────────────────────────────────────────────────────
+#  Main pipeline 
 
 def generate_christian_image(user_request: str, denomination: str = "general") -> dict:
     """
@@ -111,7 +111,7 @@ def generate_christian_image(user_request: str, denomination: str = "general") -
     }
 
 
-# ── Stability AI backend (primary) ────────────────────────────────────────────
+#  Stability AI backend (primary) 
 
 def _generate_with_stability(prompt: str, api_key: str) -> bytes | None:
     """
@@ -143,7 +143,7 @@ def _generate_with_stability(prompt: str, api_key: str) -> bytes | None:
         return None
 
 
-# ── Pollinations backend (fallback) ───────────────────────────────────────────
+#  Pollinations backend (fallback) ─
 
 def _build_pollinations_url(prompt: str) -> str:
     encoded = urllib.parse.quote(prompt)
@@ -164,7 +164,7 @@ def _verify_url_accessible(url: str) -> bool:
         return False  # Genuine connectivity failure
 
 
-# ── Optional: DALL-E 3 backend ────────────────────────────────────────────────
+#  Optional: DALL-E 3 backend 
 
 def _generate_with_dalle(prompt: str, api_key: str) -> str | None:
     """
@@ -187,7 +187,7 @@ def _generate_with_dalle(prompt: str, api_key: str) -> str | None:
         return None
 
 
-# ── Example prompts ───────────────────────────────────────────────────────────
+#  Example prompts ─
 
 EXAMPLE_IMAGE_PROMPTS: list[str] = [
     "The Good Shepherd caring for his flock at golden hour",
