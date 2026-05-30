@@ -31,23 +31,31 @@ A Christianity-focused AI assistant that answers theological questions, generate
 ## Project Structure
 
 ```
-faith_ai/
+CRUCHPROJECT/
 │
-├── app.py                  # Streamlit entry point — UI, routing, session memory
-├── ai_engine.py            # All LLM calls: chat, theology, content generation, verse verification
-├── moderation.py           # Safety layer — RiskLevel enum (SAFE / CAUTION / BLOCK)
-├── prompt_rewriter.py      # Image prompt rewriting via GPT-4o-mini (isolated to prevent circular import)
-├── scripture_retrival.py   # RAG layer — keyword + topic + direct reference lookup
-├── scripture.py            # Book validation, denomination context, verse ref extraction
-├── image_gen.py            # Image pipeline — Stability AI primary, Pollinations fallback
+├── app.py                          # Streamlit entry point — UI, routing, session memory
+│
+├── services/
+│   ├── ai_engine.py                # All LLM calls: chat, theology, content gen, verse verification
+│   ├── image_gen.py                # Image pipeline — Stability AI primary, Pollinations fallback
+│   └── prompt_rewriter.py          # Image prompt rewriting via GPT-4o-mini (prevents circular import)
+│
+├── retrieval/
+│   ├── scripture_retrieval.py      # RAG layer — keyword + topic + direct reference lookup
+│   └── scripture.py                # Book validation, denomination context, verse ref extraction
+│
+├── safety/
+│   └── moderation.py               # RiskLevel enum (SAFE / CAUTION / BLOCK), regex classifiers
 │
 ├── data/
-│   ├── bible.json          # ~50 verses with text, topics, book, chapter, testament
-│   └── dataset.py          # Evaluation dataset — 25+ test cases across 6 categories
+│   └── bible.json                  # ~50 verses with text, topics, book, chapter, testament
 │
-├── .env                    # API keys (not committed)
-├── requirements.txt        # Python dependencies
-└── .gitignore
+├── tests/
+│   └── evaluation_dataset.py       # 25+ test cases across 6 categories
+│
+├── .env                            # API keys (not committed)
+├── requirements.txt                # Python dependencies
+└── README.md
 ```
 
 ---
@@ -59,13 +67,13 @@ Every user message passes through three mandatory gates before the LLM is called
 ```
 User Message
      ↓
-Moderation (moderation.py)
+Moderation (safety/moderation.py)
 SAFE / CAUTION / BLOCK
      ↓
-Scripture Retrieval (scripture_retrival.py)
+Scripture Retrieval (retrieval/scripture_retrieval.py)
 keyword + topic + direct reference lookup
      ↓
-Prompt Assembly (ai_engine.py)
+Prompt Assembly (services/ai_engine.py)
 retrieved verses injected inside <scripture_context> XML tags
      ↓
 GPT-4o-mini
@@ -83,24 +91,24 @@ Response to User
 Scripture hallucination — fabricating plausible-sounding but non-existent Bible verses — is the most critical failure mode for this type of system. Four layers of defence are in place:
 
 **Layer 1 — Pre-LLM Reference Validation**
-Before any LLM call, `_detect_fake_reference()` extracts all `Book Chapter:Verse` patterns from the query and validates each book name against the complete Bible book list. If the book doesn't exist (e.g. "Hezekiah 4:11"), an error is returned immediately and the LLM is never called.
+Before any LLM call, `_detect_fake_reference()` in `services/ai_engine.py` extracts all `Book Chapter:Verse` patterns from the query and validates each book name against the complete Bible book list. If the book doesn't exist (e.g. "Hezekiah 4:11"), an error is returned immediately and the LLM is never called.
 
 **Layer 2 — Local Dataset as Ground Truth**
-`retrieve_scripture_context()` searches `bible.json` first. If a verse is found, its exact text is passed to the LLM. The model is told to use only this text — it cannot fabricate what it was never given.
+`retrieve_scripture_context()` in `retrieval/scripture_retrieval.py` searches `data/bible.json` first. If a verse is found, its exact text is passed to the LLM. The model is told to use only this text — it cannot fabricate what it was never given.
 
 **Layer 3 — XML Context Wrapping + Hallucination Guard**
-Retrieved verses are wrapped in `<scripture_context>` XML tags, and a `_HALLUCINATION_GUARD` instruction is appended to every system prompt:
+Retrieved verses are wrapped in `<scripture_context>` XML tags in `services/ai_engine.py`, and a `_HALLUCINATION_GUARD` instruction is appended to every system prompt:
 
 > _"Do NOT quote verses from memory. Never complete a partial verse from memory."_
 
 **Layer 4 — Verse Verification API**
-`verify_verse_claim(reference, claimed_text)` provides post-hoc checking. It checks the local dataset first, then validates the book name, then falls back to GPT-4o-mini at `temperature=0` as a last resort. Returns structured output: `{reference_exists, text_accurate, actual_text, notes}`.
+`verify_verse_claim(reference, claimed_text)` in `services/ai_engine.py` provides post-hoc checking. It checks the local dataset first, then validates the book name, then falls back to GPT-4o-mini at `temperature=0` as a last resort. Returns structured output: `{reference_exists, text_accurate, actual_text, notes}`.
 
 ---
 
 ## Safety & Moderation
 
-`moderation.py` is a pure-Python gate with zero LLM calls — fast, deterministic, and not subject to prompt injection itself.
+`safety/moderation.py` is a pure-Python gate with zero LLM calls — fast, deterministic, and not subject to prompt injection itself.
 
 | Risk Level | Action                                                   | Example Triggers                                                      |
 | ---------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -170,8 +178,8 @@ Pollinations                ← zero-config fallback, URL returned
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/faith-ai.git
-cd faith-ai
+git clone https://github.com/your-username/CRUCHPROJECT.git
+cd CRUCHPROJECT
 ```
 
 ### 2. Install dependencies
@@ -199,7 +207,7 @@ streamlit run app.py
 
 ## Evaluation Dataset
 
-`data/dataset.py` contains 25+ hand-crafted test cases across 6 categories:
+`tests/evaluation_dataset.py` contains 25+ hand-crafted test cases across 6 categories:
 
 | Category                | Count | Purpose                                                     |
 | ----------------------- | ----- | ----------------------------------------------------------- |
@@ -214,13 +222,13 @@ streamlit run app.py
 
 ## Key Engineering Decisions
 
-**RAG over LLM memory** — LLMs fabricate Bible verses confidently. A local `bible.json` acts as ground truth. The LLM quotes only retrieved text.
+**RAG over LLM memory** — LLMs fabricate Bible verses confidently. `data/bible.json` acts as ground truth. The LLM quotes only retrieved text.
 
-**XML context wrapping** — Retrieved verses are wrapped in `<scripture_context>` tags so injected text in verse data cannot hijack the system prompt.
+**XML context wrapping** — Retrieved verses are wrapped in `<scripture_context>` tags in `services/ai_engine.py` so injected text in verse data cannot hijack the system prompt.
 
-**Isolated `prompt_rewriter.py`** — `ai_engine.py` and `image_gen.py` previously imported each other, causing a circular import. Moving `generate_image_prompt()` to its own module breaks the cycle.
+**Isolated `services/prompt_rewriter.py`** — `services/ai_engine.py` and `services/image_gen.py` previously imported each other, causing a circular import. Moving `generate_image_prompt()` to its own module breaks the cycle.
 
-**3-tier RiskLevel** — `CAUTION` allows pastoral topics (grief, doubt) to pass through with a care flag rather than being blocked outright.
+**3-tier RiskLevel** — `safety/moderation.py` uses CAUTION to allow pastoral topics (grief, doubt) to pass through with a care flag rather than being blocked outright.
 
 **Dual temperature** — `temperature=0.7` for warm conversational responses, `temperature=0.0` for verse verification and fact-checking.
 

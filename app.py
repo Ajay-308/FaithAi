@@ -25,7 +25,7 @@ from retrieval.scripture_retrival import (
 )
 from retrieval.scripture import extract_verse_refs, get_denomination_context
 from services.image_gen import generate_christian_image, EXAMPLE_IMAGE_PROMPTS
-from data.dataset import EVAL_DATASET, run_moderation_eval
+from testes.dataset import EVAL_DATASET, run_moderation_eval
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page config
