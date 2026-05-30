@@ -1,171 +1,159 @@
 """
-AI engine — all OpenAI API calls via LangChain live here.
+AI Engine — Faith & Scripture AI
+==================================
+All LLM calls go through this module.
 
-Architecture decisions:
-- System prompt assembled dynamically based on denomination + moderation level
-- Hallucination guard: model explicitly told to flag uncertain verse refs
-- Two-pass for sensitive topics: generate + self-review
-- Conversation history passed in full for memory
-- LangChain used throughout (langchain + langchain-openai)
+KEY CHANGE: Every chat/content call now goes through retrieval first.
+  User Query → scripture_retrieval → context block → LLM
+  The LLM is explicitly instructed to use ONLY the retrieved verses.
+  This prevents verse fabrication.
 
-MIGRATION NOTES (Gemini → LangChain + OpenAI gpt-4o-mini):
-  1. genai.GenerativeModel  →  ChatOpenAI(model="gpt-4o-mini")
-  2. model.start_chat(history) + send_message()
-     →  ChatOpenAI.invoke([SystemMessage, *history, HumanMessage])
-  3. Gemini roles "user"/"model"  →  OpenAI roles "user"/"assistant"
-  4. verify_verse_claim uses ChatOpenAI with JSON output parsing
-  5. Streaming via LangChain's .stream() iterator
-  6. No separate MODEL / MODEL_PRO split needed — gpt-4o-mini handles all tiers
+Model: gpt-4o-mini via LangChain ChatOpenAI
 """
 
-import json
+from __future__ import annotations
 import os
-from typing import Optional
-
 from dotenv import load_dotenv
-
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from langchain_core.output_parsers import StrOutputParser
-
-from scripture import (
-    get_denomination_context,
-    get_translation_for_denomination,
-    extract_verse_refs,
-    validate_verse_ref,
-)
 
 load_dotenv()
 
-from moderation import SYSTEM_PROMPT_SAFETY_ADDENDUM, RiskLevel
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
-# ── OpenAI / LangChain setup ──────────────────────────────────────────────────
+# Import retrieval layer
+from scripture_retrival import (
+    retrieve_scripture_context,
+    format_context_block,
+    validate_book_name,
+    get_verse,
+)
 
-_api_key = os.getenv("OPENAI_API_KEY")
-if not _api_key:
-    raise ValueError("OPENAI_API_KEY is NOT set in environment variables")
-print("Using OpenAI API key:", "SET" if _api_key else "NOT SET")
+# ── Model setup ───────────────────────────────────────────────────────────────
 
-MODEL = "gpt-4o-mini"   # fast, cheap, capable — replaces both Gemini tiers
+_llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.7,
+    openai_api_key=os.getenv("OPENAI_API_KEY"),
+)
 
+_llm_precise = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.0,
+    openai_api_key=os.getenv("OPENAI_API_KEY"),
+)
 
-# ── LangChain model factory ───────────────────────────────────────────────────
+# ── System prompts ────────────────────────────────────────────────────────────
 
-def _make_llm(temperature: float = 0.7, streaming: bool = False) -> ChatOpenAI:
-    """Return a configured ChatOpenAI instance."""
-    return ChatOpenAI(
-        model=MODEL,
-        temperature=temperature,
-        streaming=streaming,
-        openai_api_key=_api_key,
-    )
+_BASE_SYSTEM = """You are a knowledgeable, respectful, and pastoral Christian AI assistant.
 
-
-# ── System prompt builder ─────────────────────────────────────────────────────
-
-def build_system_prompt(denomination: str = "general", caution: bool = False) -> str:
-    translation  = get_translation_for_denomination(denomination)
-    denom_context = get_denomination_context(denomination)
-
-    base = f"""You are Faith & Scripture AI — a knowledgeable, warm, and theologically grounded Christian assistant.
-
-DENOMINATION CONTEXT ({denomination.title()}):
-{denom_context}
-Preferred Bible translation for this session: {translation}
-
-YOUR ROLE:
-- Answer questions about Christianity, theology, church history, and biblical interpretation
-- Generate Christian content (prayers, devotionals, reflections, hymn lyrics, sermon outlines)
-- Cite scripture accurately — book, chapter, verse
-- Maintain a pastoral, respectful, non-judgmental tone
-- Acknowledge denominational differences honestly and charitably
-
-HALLUCINATION PREVENTION (HIGHEST PRIORITY):
-- Only cite Bible verses you are highly confident exist
-- When citing, use format: "Book Chapter:Verse (Translation)"  e.g. "John 3:16 (NIV)"
-- If a user quotes a verse that seems wrong or fabricated, gently flag it:
-  "I want to make sure we're working with accurate scripture. I can't verify that exact reference.
-   The verse you may be thinking of is [correct verse], or please check BibleGateway.com."
-- Distinguish clearly: DIRECT QUOTE vs PARAPHRASE vs THEOLOGICAL INTERPRETATION
-- Never invent chapter/verse numbers to sound authoritative
-
-TONE & APPROACH:
-- Warm, accessible, pastoral — like a knowledgeable pastor/spiritual director
-- Intellectually honest: say "Christians disagree on this" when they do
-- Graceful with hard questions (theodicy, violence in OT, hell, LGBTQ+, etc.)
-- Never preachy or condescending
-- For non-Christian users showing interest: welcoming, not pressuring
-
-{SYSTEM_PROMPT_SAFETY_ADDENDUM}
+CRITICAL RULES — follow without exception:
+1. NEVER invent or fabricate Bible verses or references.
+2. When scripture context is provided below, answer ONLY using those verses.
+3. If no scripture context is provided, say you cannot cite a specific verse but can discuss the theme generally.
+4. If asked about a verse not in the provided context, say: "I don't have that verse in my current dataset to quote accurately."
+5. Always clearly distinguish between: direct quote / paraphrase / general Christian teaching.
+6. Be respectful of all Christian traditions. When traditions differ, explain each view.
+7. Refuse to use scripture to promote hatred, discrimination, or harm.
 """
 
-    if caution:
-        base += """
-⚠️  ELEVATED CAUTION MODE: This conversation has touched on sensitive territory.
-Be especially careful, pastoral, and balanced. Do not take extreme positions.
-If the user seems distressed, acknowledge their feelings before theology.
+_HALLUCINATION_GUARD = """
+HALLUCINATION PREVENTION:
+- Do NOT quote verses from memory. Only quote what is in the SCRIPTURE CONTEXT above.
+- If the user mentions a verse not in the context, acknowledge it exists (if it does) but say you cannot quote it accurately without the text.
+- Never complete a partial verse from memory.
 """
-    return base
 
 
-# ── Conversation history converter ────────────────────────────────────────────
-
-def _convert_messages_to_langchain(
-    messages: list[dict],
-    system_prompt: str,
-) -> list:
-    """
-    Convert OpenAI-style message dicts into LangChain message objects,
-    prepending the system prompt.
-
-    Input roles:  "user" | "assistant"
-    Output types: SystemMessage | HumanMessage | AIMessage
-    """
-    lc_messages: list = [SystemMessage(content=system_prompt)]
-
-    for msg in messages:
-        role    = msg["role"]
-        content = msg["content"]
-        if role == "user":
-            lc_messages.append(HumanMessage(content=content))
-        elif role == "assistant":
-            lc_messages.append(AIMessage(content=content))
-        # ignore any other roles silently
-
-    return lc_messages
-
-
-# ── Core chat ─────────────────────────────────────────────────────────────────
+# ── Main chat function ────────────────────────────────────────────────────────
 
 def chat(
     messages: list[dict],
     denomination: str = "general",
     caution: bool = False,
-    stream: bool = False,
 ) -> str:
     """
-    Send conversation to gpt-4o-mini via LangChain and return response text.
-
-    Args:
-        messages:     list of {"role": "user"/"assistant", "content": str}
-        denomination: e.g. "catholic", "baptist", "orthodox", "general"
-        caution:      True → elevated-caution system prompt addendum
-        stream:       True → stream tokens (returns joined string)
+    Retrieval-first chat.
+    1. Extract the latest user message
+    2. Retrieve relevant scripture from local dataset
+    3. Build grounded prompt
+    4. Call LLM
     """
-    system   = build_system_prompt(denomination, caution)
-    lc_msgs  = _convert_messages_to_langchain(messages, system)
+    if not messages:
+        return "Please ask me a question about Christianity or scripture."
 
-    if stream:
-        llm    = _make_llm(streaming=True)
-        chunks = []
-        for chunk in llm.stream(lc_msgs):
-            # chunk.content is a str (LangChain guarantees this for ChatOpenAI)
-            chunks.append(chunk.content or "")
-        return "".join(chunks)
+    latest_user_msg = ""
+    for m in reversed(messages):
+        if m["role"] == "user":
+            latest_user_msg = m["content"]
+            break
+
+    # ── Step 1: Check for fake book references ────────────────────────────────
+    fake_ref = _detect_fake_reference(latest_user_msg)
+    if fake_ref:
+        return fake_ref
+
+    # ── Step 2: Retrieve scripture context ────────────────────────────────────
+    retrieved = retrieve_scripture_context(latest_user_msg, top_k=4)
+    context_block = format_context_block(retrieved) if retrieved else ""
+
+    # ── Step 3: Build system prompt ───────────────────────────────────────────
+    denom_note = _get_denomination_note(denomination)
+    caution_note = "\nThis is a sensitive topic. Respond with extra pastoral care and compassion." if caution else ""
+
+    system_content = _BASE_SYSTEM
+    if context_block:
+        system_content += f"\n\n{context_block}\n{_HALLUCINATION_GUARD}"
     else:
-        llm      = _make_llm()
-        response = llm.invoke(lc_msgs)
-        return response.content
+        system_content += "\n\nNo specific scripture has been retrieved for this query. Discuss the theme thoughtfully but do not fabricate verse references."
+    system_content += denom_note + caution_note
+
+    # ── Step 4: Build message history ─────────────────────────────────────────
+    lc_messages = [SystemMessage(content=system_content)]
+    for m in messages[:-1]:   # all but last (latest already captured)
+        if m["role"] == "user":
+            lc_messages.append(HumanMessage(content=m["content"]))
+        elif m["role"] == "assistant":
+            lc_messages.append(AIMessage(content=m["content"]))
+    lc_messages.append(HumanMessage(content=latest_user_msg))
+
+    response = _llm.invoke(lc_messages)
+    return response.content
+
+
+# ── Difficult theology ────────────────────────────────────────────────────────
+
+def handle_difficult_theology(question: str, denomination: str = "general") -> str:
+    """
+    Two-pass approach for theologically sensitive questions.
+    Pass 1: retrieve relevant verses
+    Pass 2: generate nuanced, multi-denominational response grounded in those verses
+    """
+    # Retrieve relevant scripture
+    retrieved = retrieve_scripture_context(question, top_k=5)
+    context_block = format_context_block(retrieved) if retrieved else ""
+
+    system = f"""{_BASE_SYSTEM}
+
+{context_block}
+
+{_HALLUCINATION_GUARD}
+
+This is a theologically difficult question. Your response must:
+1. Acknowledge the difficulty honestly
+2. Present multiple Christian perspectives (Catholic, Protestant, Orthodox where relevant)
+3. Ground reasoning in the scripture provided above
+4. Avoid declaring one tradition absolutely correct on disputed matters
+5. Be pastorally sensitive — someone may be hurting
+6. End with pastoral encouragement
+
+{_get_denomination_note(denomination)}
+"""
+
+    response = _llm_precise.invoke([
+        SystemMessage(content=system),
+        HumanMessage(content=question),
+    ])
+    return response.content
 
 
 # ── Content generation ────────────────────────────────────────────────────────
@@ -177,200 +165,182 @@ def generate_christian_content(
     tone: str = "reflective",
 ) -> str:
     """
-    Dedicated content generation: prayers, devotionals, sermon outlines, etc.
-
-    Args:
-        content_type: "prayer" | "devotional" | "sermon_outline" | "reflection" | "hymn"
-        topic:        Subject matter, e.g. "forgiveness", "Advent hope"
-        denomination: Denominational context
-        tone:         "reflective" | "celebratory" | "solemn" | "intimate" | "bold"
+    Generate prayers, devotionals, sermon outlines, etc.
+    Retrieves relevant scripture first so content is grounded.
     """
-    type_instructions: dict[str, str] = {
-        "prayer": (
-            f"Write a heartfelt, scripturally grounded prayer about: {topic}. "
-            f"Include at least one relevant scripture reference. Tone: {tone}."
-        ),
-        "devotional": (
-            f"Write a 200-250 word daily devotional on: {topic}. "
-            f"Structure: opening verse → reflection → application → closing prayer. "
-            f"Verify all scripture citations."
-        ),
-        "sermon_outline": (
-            f"Create a structured sermon outline on: {topic}. "
-            f"Include: Title, Key Text, 3 main points each with supporting verses, "
-            f"illustration suggestion, and call to action."
-        ),
-        "reflection": (
-            f"Write a thoughtful spiritual reflection on: {topic}. "
-            f"Personal, warm, scripturally grounded."
-        ),
-        "hymn": (
-            f"Write original hymn lyrics (2-3 verses + chorus) on the theme of: {topic}. "
-            f"Traditional meter preferred."
-        ),
+    retrieved = retrieve_scripture_context(topic, top_k=4)
+    context_block = format_context_block(retrieved) if retrieved else ""
+
+    type_instructions = {
+        "prayer":          "Write a heartfelt Christian prayer of 150-200 words.",
+        "devotional":      "Write a daily devotional of 200-250 words with a scripture focus, reflection, and application.",
+        "sermon_outline":  "Create a structured sermon outline with: Title, Main Scripture, 3 points each with sub-points and supporting verses, and a conclusion.",
+        "reflection":      "Write a thoughtful spiritual reflection of 200 words.",
+        "hymn":            "Write original hymn lyrics with 3 verses and a chorus in a traditional style.",
     }
 
-    instruction = type_instructions.get(
-        content_type,
-        f"Create Christian {content_type} content about: {topic}. Tone: {tone}."
-    )
+    instruction = type_instructions.get(content_type, f"Write Christian {content_type} content.")
 
-    system = build_system_prompt(denomination)
-    llm    = _make_llm()
-    response = llm.invoke([
+    system = f"""{_BASE_SYSTEM}
+
+{context_block}
+
+{_HALLUCINATION_GUARD}
+
+Task: {instruction}
+Topic: {topic}
+Tone: {tone}
+Denomination context: {denomination}
+
+Only cite scripture that appears in the SCRIPTURE CONTEXT above.
+If you reference a verse, quote it accurately from the context provided.
+"""
+
+    response = _llm.invoke([
         SystemMessage(content=system),
-        HumanMessage(content=instruction),
+        HumanMessage(content=f"Generate {content_type} about: {topic}"),
     ])
     return response.content
 
 
 # ── Verse verification ────────────────────────────────────────────────────────
 
-_VERSE_VERIFIER_SYSTEM = (
-    "You are a precise Biblical reference checker. "
-    "You respond ONLY with valid raw JSON — no markdown fences, no preamble, no explanation. "
-    "Your sole job is to verify Bible verse references and texts."
-)
-
-
-def _strip_json_fences(text: str) -> str:
-    """Remove ```json / ``` wrappers that the model sometimes adds."""
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1]
-    if text.endswith("```"):
-        text = text.rsplit("```", 1)[0]
-    return text.strip()
-
-
-def verify_verse_claim(claimed_verse: str, claimed_text: str) -> dict:
+def verify_verse_claim(reference: str, claimed_text: str) -> dict:
     """
-    Ask gpt-4o-mini to verify whether a verse reference + text is accurate.
-
-    Returns:
-        {
-          "reference_exists": bool | None,
-          "text_accurate":    bool | None,
-          "actual_text":      str,
-          "correct_reference": str,
-          "notes":            str,
+    Verify whether a verse reference and text are accurate.
+    First checks local dataset, then uses LLM with temperature=0.
+    """
+    # ── Step 1: Check local dataset first ────────────────────────────────────
+    local_verse = get_verse(reference)
+    if local_verse:
+        actual_text   = local_verse["text"]
+        text_accurate = _texts_similar(claimed_text, actual_text)
+        return {
+            "reference_exists": True,
+            "text_accurate":    text_accurate,
+            "actual_text":      actual_text,
+            "correct_reference": reference,
+            "notes":            "Verified from local Bible dataset (NIV).",
         }
-    """
-    prompt = f"""A user has cited this Bible verse:
 
-Reference: {claimed_verse}
-Claimed text: "{claimed_text}"
+    # ── Step 2: Check if book exists at all ───────────────────────────────────
+    parts     = reference.strip().rsplit(" ", 1)
+    book_name = parts[0] if len(parts) == 2 else reference
+    valid_book, book_msg = validate_book_name(book_name)
+    if not valid_book:
+        return {
+            "reference_exists": False,
+            "text_accurate":    False,
+            "actual_text":      None,
+            "correct_reference": None,
+            "notes":            book_msg,
+        }
 
-Please verify:
-1. Does this reference ({claimed_verse}) actually exist in the Bible?
-2. Is the quoted text accurate (even approximately)?
-3. If inaccurate, what IS the actual text of that verse?
-4. If the reference doesn't exist, what verse might they be thinking of?
+    # ── Step 3: Book exists but verse not in local dataset → ask LLM ─────────
+    system = """You are a Bible fact-checker. Be precise and honest.
+If you are not certain, say so. Do NOT invent verse text.
+Respond in JSON with keys:
+  reference_exists (bool),
+  text_accurate (bool or null if uncertain),
+  actual_text (string or null),
+  correct_reference (string or null),
+  notes (string)
+"""
+    prompt = (
+        f"Reference claimed: {reference}\n"
+        f"Text claimed: {claimed_text}\n\n"
+        "Does this reference exist? Is the text accurate? "
+        "This verse is not in my local dataset so answer carefully."
+    )
 
-Respond in this exact JSON format (raw JSON only, no markdown fences):
-{{
-  "reference_exists": true,
-  "text_accurate": true,
-  "actual_text": "...",
-  "correct_reference": "...",
-  "notes": "..."
-}}"""
-
-    # Low temperature for factual verification
-    llm = _make_llm(temperature=0.0)
-    response = llm.invoke([
-        SystemMessage(content=_VERSE_VERIFIER_SYSTEM),
-        HumanMessage(content=prompt),
-    ])
-
+    import json as _json
     try:
-        cleaned = _strip_json_fences(response.content)
-        return json.loads(cleaned)
+        response = _llm_precise.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=prompt),
+        ])
+        raw = response.content.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        return _json.loads(raw)
     except Exception:
         return {
             "reference_exists": None,
-            "text_accurate": None,
-            "actual_text": "",
-            "correct_reference": "",
-            "notes": "Could not verify — please check BibleGateway.com",
+            "text_accurate":    None,
+            "actual_text":      None,
+            "correct_reference": None,
+            "notes":            "Could not verify — not in local dataset. Check a Bible concordance.",
         }
 
 
-# ── Image prompt engineering ──────────────────────────────────────────────────
-
-_IMAGE_PROMPT_SYSTEM = """You are an art director specialising in reverent Christian imagery.
-Convert user requests into detailed, respectful image generation prompts.
-Style should be: painterly, classical, warm lighting, inspired by Renaissance/Byzantine art traditions.
-Never include: violence, sexuality, mockery, or theologically controversial depictions.
-If the request is for something potentially inappropriate, redirect to beautiful symbolic imagery instead.
-Respond with ONLY the image prompt, nothing else — no preamble, no explanation."""
-
+# ── Image prompt rewriter ─────────────────────────────────────────────────────
 
 def generate_image_prompt(user_request: str, denomination: str = "general") -> str:
     """
-    Convert a user's image request into a safe, detailed, reverent image generation prompt.
-    Acts as a safety + quality buffer between raw user input and the image API.
-
-    Returns:
-        A polished image-generation prompt string (no extra text).
+    Rewrite a user image request into a safe, detailed, art-directed prompt
+    suitable for Stability AI / Pollinations.
     """
-    llm = _make_llm(temperature=0.5)
-    response = llm.invoke([
-        SystemMessage(content=_IMAGE_PROMPT_SYSTEM),
+    system = """You are a Christian art director specializing in reverent religious imagery.
+Rewrite the user's request into a detailed, safe image generation prompt.
+Style: Renaissance painting, classical Christian art, warm golden light, reverent atmosphere.
+Never include: violence, disturbing imagery, disrespectful depictions of sacred figures.
+Return ONLY the rewritten prompt, no explanation."""
+
+    response = _llm_precise.invoke([
+        SystemMessage(content=system),
         HumanMessage(content=f"Create an image prompt for: {user_request}"),
     ])
     return response.content.strip()
 
 
-# ── Difficult theology handler ────────────────────────────────────────────────
+# ── Internal helpers ──────────────────────────────────────────────────────────
 
-def handle_difficult_theology(question: str, denomination: str = "general") -> str:
+def _detect_fake_reference(query: str) -> str | None:
     """
-    Specially tuned handler for theodicy, evil, suffering,
-    religious violence, and other hard theological questions.
-
-    Uses two-pass approach:
-      Pass 1 — Generate a thorough theological response
-      Pass 2 — Self-review for balance, pastoral care, and accuracy
+    Check if query references a non-existent Bible book.
+    Returns an explanatory message if fake, None if query seems fine.
     """
-    extra = """
+    import re
+    pattern = r'\b([1-3]?\s?[A-Za-z]+)\s+\d+:\d+\b'
+    matches = re.findall(pattern, query)
 
-SPECIAL MODE: Difficult Theological Question
-- Acknowledge the genuine difficulty and emotional weight of the question
-- Present the major theological positions (e.g. Augustine, Plantinga on theodicy)
-- Do not pretend there are easy answers
-- Cite relevant scripture with context, not proof-texting
-- End with pastoral care, not a triumphalist conclusion
-- Be honest about what Christianity has historically said AND its limits
-"""
-    system = build_system_prompt(denomination) + extra
-    llm    = _make_llm(temperature=0.5)
+    for raw_book in matches:
+        book = raw_book.strip().title()
+        valid, msg = validate_book_name(book)
+        if not valid:
+            return (
+                f"⚠️ **Reference Issue**: {msg}\n\n"
+                "I won't fabricate content for a verse that doesn't exist. "
+                "Please check the reference and try again. "
+                "You can use the **Verse Verifier** tool to validate references."
+            )
+    return None
 
-    # Pass 1: Generate
-    draft_response = llm.invoke([
-        SystemMessage(content=system),
-        HumanMessage(content=question),
-    ])
-    draft = draft_response.content
 
-    # Pass 2: Self-review for balance and pastoral care
-    review_prompt = f"""Review the following theological response for:
-1. Theological balance — does it represent multiple legitimate Christian perspectives?
-2. Pastoral sensitivity — is it appropriately compassionate?
-3. Scripture accuracy — are all citations verifiable?
-4. Tone — is it honest without being dismissive or triumphalist?
+def _get_denomination_note(denomination: str) -> str:
+    notes = {
+        "catholic":   "\nDenomination: Catholic. Include references to Tradition and Magisterium where relevant. Deuterocanonical books are canonical.",
+        "orthodox":   "\nDenomination: Eastern Orthodox. Emphasize Theosis, Holy Tradition, and the Church Fathers. Deuterocanonical books are canonical.",
+        "protestant": "\nDenomination: Protestant. Emphasize Sola Scriptura. Scripture alone is the final authority.",
+        "reformed":   "\nDenomination: Reformed/Calvinist. Emphasize God's sovereignty, election, and covenant theology.",
+        "baptist":    "\nDenomination: Baptist. Emphasize believer's baptism, local church authority, and scripture alone.",
+        "lutheran":   "\nDenomination: Lutheran. Emphasize Law and Gospel distinction, grace alone, faith alone.",
+        "general":    "",
+    }
+    return notes.get(denomination, "")
 
-If the response is good, return it as-is.
-If it needs improvement, return an improved version.
-Return ONLY the final response text, no commentary.
 
-Response to review:
----
-{draft}
----"""
+def _texts_similar(text_a: str, text_b: str) -> bool:
+    """
+    Simple similarity check: do the texts share most key words?
+    """
+    import re
+    stop = {"the", "a", "an", "and", "or", "is", "are", "was", "were", "in", "of", "to", "for"}
 
-    final_response = llm.invoke([
-        SystemMessage(content=system),
-        HumanMessage(content=review_prompt),
-    ])
-    return final_response.content
+    def words(t):
+        return set(re.findall(r"[a-z]+", t.lower())) - stop
+
+    w_a = words(text_a)
+    w_b = words(text_b)
+    if not w_a or not w_b:
+        return False
+    overlap = len(w_a & w_b) / max(len(w_a), len(w_b))
+    return overlap > 0.6

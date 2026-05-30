@@ -2,15 +2,14 @@
 Faith & Scripture AI — Streamlit App
 =====================================
 A Christianity-focused AI assistant with:
-- Scripture-grounded chat with hallucination prevention
+- Scripture-grounded chat (retrieval-first, hallucination-prevented)
 - Christian content generation (prayers, devotionals, sermons)
 - Christian image generation with safety layer
 - Denomination-aware handling
 - Moderation / safety throughout
 - Eval dashboard
 
-MIGRATION: Uses LangChain + OpenAI gpt-4o-mini (was Gemini).
-Set OPENAI_API_KEY in your .env file.
+Set OPENAI_API_KEY and STABILITY_API_KEY in your .env file.
 """
 
 import sys
@@ -18,10 +17,15 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import streamlit as st
-import json
 from moderation import moderate_message, moderate_image_prompt, RiskLevel
 from ai_engine import chat, generate_christian_content, verify_verse_claim, handle_difficult_theology
-from scripture import extract_verse_refs, validate_verse_ref, get_denomination_context
+from scripture_retrival import (
+    retrieve_scripture_context,
+    validate_book_name,
+    validate_verse_ref,
+    get_all_topics,
+)
+from scripture import extract_verse_refs, get_denomination_context
 from image_gen import generate_christian_image, EXAMPLE_IMAGE_PROMPTS
 from data.dataset import EVAL_DATASET, run_moderation_eval
 
@@ -50,7 +54,7 @@ st.markdown("""
         color: white;
     }
     .main-header h1 { color: white; margin: 0; font-size: 1.8rem; }
-    .main-header p { color: #b8d4e8; margin: 0.3rem 0 0; font-size: 0.95rem; }
+    .main-header p  { color: #b8d4e8; margin: 0.3rem 0 0; font-size: 0.95rem; }
 
     .verse-box {
         background: #f0f7ff;
@@ -61,47 +65,47 @@ st.markdown("""
         font-style: italic;
         color: #1a3a5c;
     }
-    .safety-badge-safe {
-        background: #d4edda; color: #155724;
-        padding: 0.2rem 0.6rem; border-radius: 12px;
-        font-size: 0.8rem; font-weight: 600;
-    }
-    .safety-badge-block {
-        background: #f8d7da; color: #721c24;
-        padding: 0.2rem 0.6rem; border-radius: 12px;
-        font-size: 0.8rem; font-weight: 600;
-    }
-    .safety-badge-caution {
-        background: #fff3cd; color: #856404;
-        padding: 0.2rem 0.6rem; border-radius: 12px;
-        font-size: 0.8rem; font-weight: 600;
-    }
-    .denom-info {
-        background: #fafafa;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 0.8rem 1rem;
+    .retrieved-verse {
+        background: #f7f7f2;
+        border-left: 3px solid #c8a84b;
+        padding: 0.5rem 0.8rem;
+        border-radius: 0 6px 6px 0;
+        margin: 0.3rem 0;
         font-size: 0.88rem;
-        color: #444;
-        margin-top: 0.5rem;
+        color: #333;
     }
-    .eval-pass { color: #155724; font-weight: bold; }
-    .eval-fail { color: #721c24; font-weight: bold; }
+    .grounded-badge {
+        background: #d4edda; color: #155724;
+        padding: 0.15rem 0.5rem; border-radius: 10px;
+        font-size: 0.78rem; font-weight: 600;
+        display: inline-block; margin-bottom: 0.4rem;
+    }
+    .safety-badge-safe    { background:#d4edda; color:#155724; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:600; }
+    .safety-badge-block   { background:#f8d7da; color:#721c24; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:600; }
+    .safety-badge-caution { background:#fff3cd; color:#856404; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:600; }
+    .denom-info {
+        background: #fafafa; border: 1px solid #e0e0e0;
+        border-radius: 8px; padding: 0.8rem 1rem;
+        font-size: 0.88rem; color: #444; margin-top: 0.5rem;
+    }
     .stChatMessage { border-radius: 10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Session state initialisation
+# Session state
 # ─────────────────────────────────────────────────────────────────────────────
 
 defaults = {
-    "messages": [],
-    "denomination": "general",
-    "caution_mode": False,
+    "messages":       [],
+    "denomination":   "general",
+    "caution_mode":   False,
     "moderation_log": [],
-    "image_prompt": "",
-    "tool_mode": "💬 Chat",
+    "image_prompt":   "",
+    "tool_mode":      "💬 Chat",
+    "pending_input":  None,
+    "image_result":   None,
+    "pending_image":  False,
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -114,7 +118,6 @@ for key, val in defaults.items():
 with st.sidebar:
     st.markdown("## ✝️ Faith & Scripture AI")
     st.caption("Grounded in Scripture · Respectful of Tradition")
-
     st.divider()
 
     st.markdown("### 🕊️ Denomination")
@@ -124,7 +127,6 @@ with st.sidebar:
         format_func=lambda x: x.title(),
         key="denomination",
     )
-
     if denomination != "general":
         denom_info = get_denomination_context(denomination) or ""
         if denom_info:
@@ -135,7 +137,8 @@ with st.sidebar:
     st.markdown("### 📖 Quick Tools")
     tool_mode = st.radio(
         "Mode",
-        ["💬 Chat", "✍️ Content Generator", "🖼️ Image Generator", "🔍 Verse Verifier", "🧪 Eval Dashboard"],
+        ["💬 Chat", "✍️ Content Generator", "🖼️ Image Generator",
+         "🔍 Verse Verifier", "🧪 Eval Dashboard"],
         label_visibility="collapsed",
         key="tool_mode",
     )
@@ -143,7 +146,7 @@ with st.sidebar:
     st.divider()
 
     if st.button("🗑️ Clear Conversation", use_container_width=True):
-        st.session_state.messages = []
+        st.session_state.messages   = []
         st.session_state.caution_mode = False
         st.rerun()
 
@@ -161,9 +164,8 @@ with st.sidebar:
             st.caption("No moderation events yet.")
 
     st.divider()
-    # Updated: reflects the new model/provider
-    st.caption("Built with LangChain · OpenAI gpt-4o-mini")
-    st.caption("Architecture: Prompt Engineering + Grounding + Safety Layers")
+    st.caption("Chat: gpt-4o-mini · Images: Stability AI")
+    st.caption("RAG: Local Bible dataset · Safety: moderation layer")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -173,20 +175,20 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>✝️ Faith & Scripture AI</h1>
-    <p>A theologically grounded assistant · Scripture-aware · Denomination-sensitive · Safety-first</p>
+    <p>Scripture-grounded · Retrieval-first · Hallucination-prevented · Denomination-sensitive</p>
 </div>
 """, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Helper: log moderation event
+# Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def log_moderation(user_input: str, level: str, reason: str = ""):
     st.session_state.moderation_log.append({
         "preview": user_input[:60],
-        "level": level,
-        "reason": reason,
+        "level":   level,
+        "reason":  reason,
     })
 
 
@@ -197,10 +199,11 @@ def log_moderation(user_input: str, level: str, reason: str = ""):
 if st.session_state.tool_mode == "💬 Chat":
 
     for msg in st.session_state.messages:
-        with st.chat_message(msg["role"], avatar="🙏" if msg["role"] == "assistant" else "👤"):
+        avatar = "🙏" if msg["role"] == "assistant" else "👤"
+        with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-    if not st.session_state.messages:
+    if not st.session_state.messages and not st.session_state.get("pending_input"):
         st.markdown("#### 💡 Try asking...")
         cols = st.columns(2)
         suggestions = [
@@ -208,71 +211,102 @@ if st.session_state.tool_mode == "💬 Chat":
             "Explain the Trinity in simple terms",
             "What does the Bible say about anxiety?",
             "Why did God allow suffering in Job's life?",
-            "Hezekiah 4:11 says trust in the Lord — explain this",  # hallucination trap
+            "Hezekiah 4:11 says trust in the Lord — explain this",
         ]
         for i, s in enumerate(suggestions):
             if cols[i % 2].button(s, key=f"sug_{i}", use_container_width=True):
-                st.session_state.messages.append({"role": "user", "content": s})
+                st.session_state.pending_input = s
                 st.rerun()
 
-    user_input = st.chat_input("Ask anything about Christianity, scripture, theology...")
+    typed_input = st.chat_input("Ask anything about Christianity, scripture, theology...")
+    user_input  = typed_input or st.session_state.pop("pending_input", None)
 
     if user_input:
         mod = moderate_message(user_input)
         log_moderation(user_input, mod.level.value, mod.reason or "")
 
-        if mod.level == RiskLevel.BLOCK:
-            st.session_state.messages.append({"role": "user", "content": user_input})
-            response = mod.suggested_response
-            st.session_state.messages.append({"role": "assistant", "content": f"🛡️ **Content Policy** | {response}"})
-            st.rerun()
-
-        elif mod.level == RiskLevel.CAUTION:
-            st.session_state.caution_mode = True
-
         st.session_state.messages.append({"role": "user", "content": user_input})
-
         with st.chat_message("user", avatar="👤"):
             st.markdown(user_input)
 
-        difficult_keywords = ["suffering", "evil", "genocide", "homosexual", "hell", "theodicy", "why did god"]
-        is_difficult = any(kw in user_input.lower() for kw in difficult_keywords)
+        if mod.level == RiskLevel.BLOCK:
+            blocked_reply = f"🛡️ **Content Policy** | {mod.suggested_response}"
+            st.session_state.messages.append({"role": "assistant", "content": blocked_reply})
+            with st.chat_message("assistant", avatar="🙏"):
+                st.markdown(blocked_reply)
 
-        with st.chat_message("assistant", avatar="🙏"):
-            with st.spinner("Searching scripture..."):
-                try:
-                    if is_difficult:
-                        response = handle_difficult_theology(
-                            user_input,
-                            denomination=st.session_state.denomination,
+        else:
+            if mod.level == RiskLevel.CAUTION:
+                st.session_state.caution_mode = True
+
+            # Retrieve scripture BEFORE calling LLM — show user what was found
+            retrieved_verses = retrieve_scripture_context(user_input, top_k=4)
+
+            difficult_keywords = ["suffering", "evil", "genocide", "homosexual",
+                                  "hell", "theodicy", "why did god", "purgatory",
+                                  "predestination", "free will"]
+            is_difficult = any(kw in user_input.lower() for kw in difficult_keywords)
+
+            with st.chat_message("assistant", avatar="🙏"):
+
+                # Show retrieved verses before response
+                if retrieved_verses:
+                    st.markdown('<span class="grounded-badge">📖 Scripture-grounded response</span>',
+                                unsafe_allow_html=True)
+                    with st.expander(
+                        f"📚 {len(retrieved_verses)} verse(s) retrieved from local dataset",
+                        expanded=False
+                    ):
+                        for v in retrieved_verses:
+                            st.markdown(
+                                f'<div class="retrieved-verse">'
+                                f'<strong>{v["reference"]}</strong><br>'
+                                f'"{v["text"]}"'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                            st.caption(
+                                f"[BibleGateway ↗](https://www.biblegateway.com/passage/?search="
+                                f"{v['reference'].replace(' ', '+')})"
+                            )
+
+                with st.spinner("Searching scripture..."):
+                    try:
+                        if is_difficult:
+                            response = handle_difficult_theology(
+                                user_input,
+                                denomination=st.session_state.denomination,
+                            )
+                        else:
+                            response = chat(
+                                messages=st.session_state.messages,
+                                denomination=st.session_state.denomination,
+                                caution=st.session_state.caution_mode,
+                            )
+                    except Exception as e:
+                        response = (
+                            f"⚠️ Error: {str(e)}\n\n"
+                            "Please ensure your OPENAI_API_KEY is set in your .env file."
                         )
-                    else:
-                        response = chat(
-                            messages=st.session_state.messages,
-                            denomination=st.session_state.denomination,
-                            caution=st.session_state.caution_mode,
-                        )
-                except Exception as e:
-                    response = (
-                        f"⚠️ I encountered an error: {str(e)}\n\n"
-                        "Please ensure your OPENAI_API_KEY is set in your .env file."
-                    )
 
-            if st.session_state.caution_mode:
-                st.caption("🟡 Sensitive topic — responding with extra pastoral care")
+                if st.session_state.caution_mode:
+                    st.caption("🟡 Sensitive topic — responding with extra pastoral care")
 
-            st.markdown(response)
+                st.markdown(response)
 
-            refs = extract_verse_refs(response)
-            if refs:
-                with st.expander(f"📖 Scripture references in this response ({len(refs)})", expanded=False):
-                    for ref in refs:
-                        st.markdown(
-                            f"• **{ref}** — "
-                            f"[Look up on BibleGateway](https://www.biblegateway.com/passage/?search={ref.replace(' ', '+')})"
-                        )
+                refs = extract_verse_refs(response)
+                if refs:
+                    with st.expander(
+                        f"📖 Scripture references cited ({len(refs)})", expanded=False
+                    ):
+                        for ref in refs:
+                            st.markdown(
+                                f"• **{ref}** — "
+                                f"[Look up on BibleGateway]"
+                                f"(https://www.biblegateway.com/passage/?search={ref.replace(' ', '+')})"
+                            )
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -282,7 +316,7 @@ if st.session_state.tool_mode == "💬 Chat":
 elif st.session_state.tool_mode == "✍️ Content Generator":
 
     st.markdown("### ✍️ Christian Content Generator")
-    st.caption("Generate prayers, devotionals, sermon outlines, hymns — all scripture-grounded")
+    st.caption("Generate prayers, devotionals, sermon outlines — all scripture-grounded via retrieval")
 
     col1, col2 = st.columns([1, 1])
 
@@ -308,6 +342,20 @@ elif st.session_state.tool_mode == "✍️ Content Generator":
             if mod.level == RiskLevel.BLOCK:
                 st.error(f"🛡️ {mod.suggested_response}")
             else:
+                # Show retrieved verses first
+                retrieved = retrieve_scripture_context(topic, top_k=3)
+                if retrieved:
+                    st.markdown('<span class="grounded-badge">📖 Scripture-grounded</span>',
+                                unsafe_allow_html=True)
+                    with st.expander("📚 Scripture retrieved for grounding", expanded=True):
+                        for v in retrieved:
+                            st.markdown(
+                                f'<div class="retrieved-verse">'
+                                f'<strong>{v["reference"]}</strong>: "{v["text"]}"'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
                 with st.spinner(f"Crafting your {content_type}..."):
                     try:
                         result = generate_christian_content(
@@ -316,12 +364,14 @@ elif st.session_state.tool_mode == "✍️ Content Generator":
                             denomination=st.session_state.denomination,
                             tone=tone,
                         )
-                        st.markdown(f'<div class="verse-box">{result}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="verse-box">{result}</div>',
+                                    unsafe_allow_html=True)
                         refs = extract_verse_refs(result)
                         if refs:
                             st.caption(f"📖 Scripture cited: {', '.join(refs)}")
                     except Exception as e:
                         st.error(f"Error: {e}")
+
         elif not topic and generate_btn:
             st.warning("Please enter a topic first.")
         else:
@@ -335,7 +385,7 @@ elif st.session_state.tool_mode == "✍️ Content Generator":
 elif st.session_state.tool_mode == "🖼️ Image Generator":
 
     st.markdown("### 🖼️ Christian Image Generator")
-    st.caption("Generate reverent Christian artwork · All prompts safety-checked and art-directed")
+    st.caption("Generate reverent Christian artwork · Stability AI primary · Pollinations fallback")
 
     col1, col2 = st.columns([1, 1.2])
 
@@ -352,19 +402,25 @@ elif st.session_state.tool_mode == "🖼️ Image Generator":
         for ex in EXAMPLE_IMAGE_PROMPTS[:4]:
             if st.button(ex, key=f"ex_{ex[:20]}", use_container_width=True):
                 st.session_state.image_prompt = ex
+                st.session_state.pending_image = True
                 st.rerun()
 
         gen_btn = st.button("🎨 Generate Image", type="primary", use_container_width=True)
 
+    should_generate = gen_btn or st.session_state.get("pending_image", False)
+    if should_generate:
+        st.session_state.pending_image = False
+
     with col2:
         current_prompt = st.session_state.image_prompt
 
-        if gen_btn and current_prompt:
+        if should_generate and current_prompt:
             mod = moderate_image_prompt(current_prompt)
             log_moderation(current_prompt, mod.level.value, mod.reason or "")
 
             if mod.level == RiskLevel.BLOCK:
                 st.error(f"🛡️ {mod.suggested_response}")
+                st.session_state.image_result = None
             else:
                 with st.spinner("Creating your Christian artwork..."):
                     try:
@@ -373,16 +429,41 @@ elif st.session_state.tool_mode == "🖼️ Image Generator":
                             denomination=st.session_state.denomination,
                         )
                         if result["success"]:
-                            st.image(result["image_url"], caption="Generated Christian Artwork", use_container_width=True)
-                            with st.expander("🎨 Art direction prompt used"):
-                                st.caption(result["prompt_used"])
+                            if result.get("image_bytes"):
+                                st.session_state.image_result = {
+                                    "bytes":  result["image_bytes"],
+                                    "prompt": result["prompt_used"],
+                                }
+                            elif result.get("image_url"):
+                                st.session_state.image_result = {
+                                    "url":    result["image_url"],
+                                    "prompt": result["prompt_used"],
+                                }
                         else:
-                            st.error(result["reason"])
+                            st.session_state.image_result = {
+                                "error": result.get("reason", "Unknown error."),
+                            }
                     except Exception as e:
-                        st.error(f"Image generation error: {e}")
-        elif gen_btn and not current_prompt:
+                        st.session_state.image_result = {"error": str(e)}
+
+        elif should_generate and not current_prompt:
             st.warning("Please describe the image you want.")
-        else:
+
+        result = st.session_state.get("image_result")
+        if result:
+            if "error" in result:
+                st.error(f"Image generation error: {result['error']}")
+            elif "bytes" in result:
+                st.image(result["bytes"], caption="Generated Christian Artwork",
+                         use_container_width=True)
+                with st.expander("🎨 Art direction prompt used"):
+                    st.caption(result["prompt"])
+            elif "url" in result:
+                st.image(result["url"], caption="Generated Christian Artwork",
+                         use_container_width=True)
+                with st.expander("🎨 Art direction prompt used"):
+                    st.caption(result["prompt"])
+        elif not should_generate:
             st.info("👈 Describe a scene and click Generate")
 
 
@@ -393,33 +474,35 @@ elif st.session_state.tool_mode == "🖼️ Image Generator":
 elif st.session_state.tool_mode == "🔍 Verse Verifier":
 
     st.markdown("### 🔍 Bible Verse Verifier")
-    st.caption("Check if a verse reference and text are accurate — guards against hallucination and misquotation")
+    st.caption("Checks local dataset first · Falls back to LLM with temperature=0 · Never fabricates")
 
     col1, col2 = st.columns([1, 1])
 
     with col1:
         verse_ref  = st.text_input("Verse reference", placeholder="e.g. John 3:16")
-        verse_text = st.text_area("Verse text to verify", placeholder="Paste the verse text here...", height=100)
+        verse_text = st.text_area("Verse text to verify",
+                                   placeholder="Paste the verse text here...", height=100)
         verify_btn = st.button("🔍 Verify", type="primary")
 
         st.divider()
-        st.markdown("**Quick structural check:**")
+        st.markdown("**Quick book validation:**")
         book_check  = st.text_input("Book name", placeholder="e.g. Hezekiah")
         chap_check  = st.number_input("Chapter", min_value=1, max_value=200, value=1)
         verse_check = st.number_input("Verse",   min_value=1, max_value=200, value=1)
-        struct_btn  = st.button("Check structure")
+        struct_btn  = st.button("Check book")
 
     with col2:
         if verify_btn and verse_ref and verse_text:
             with st.spinner("Verifying against scripture..."):
                 try:
                     result = verify_verse_claim(verse_ref, verse_text)
+
                     if result.get("reference_exists") is True:
                         st.success("✅ Reference exists in the Bible")
                     elif result.get("reference_exists") is False:
                         st.error("❌ This reference does NOT exist in the Bible")
                     else:
-                        st.warning("⚠️ Could not verify reference definitively")
+                        st.warning("⚠️ Could not verify definitively")
 
                     if result.get("text_accurate") is True:
                         st.success("✅ Text is accurate")
@@ -427,21 +510,25 @@ elif st.session_state.tool_mode == "🔍 Verse Verifier":
                         st.error("❌ Text does not match this verse")
 
                     if result.get("actual_text"):
-                        st.markdown("**Actual verse text:**")
-                        st.markdown(f'<div class="verse-box">{result["actual_text"]}</div>', unsafe_allow_html=True)
+                        st.markdown("**Actual verse text (from local dataset or verified source):**")
+                        st.markdown(
+                            f'<div class="verse-box">{result["actual_text"]}</div>',
+                            unsafe_allow_html=True,
+                        )
 
                     if result.get("correct_reference") and result["correct_reference"] != verse_ref:
                         st.info(f"📖 Correct reference: **{result['correct_reference']}**")
 
                     if result.get("notes"):
                         st.caption(f"Note: {result['notes']}")
+
                 except Exception as e:
                     st.error(f"Verification error: {e}")
 
         if struct_btn and book_check:
-            is_valid, msg = validate_verse_ref(book_check, int(chap_check), int(verse_check))
-            if is_valid:
-                st.success(f"✅ {msg} {chap_check}:{verse_check} — structurally valid reference")
+            valid, msg = validate_book_name(book_check)
+            if valid:
+                st.success(f"✅ {msg}")
             else:
                 st.error(f"❌ {msg}")
 
@@ -453,9 +540,9 @@ elif st.session_state.tool_mode == "🔍 Verse Verifier":
 elif st.session_state.tool_mode == "🧪 Eval Dashboard":
 
     st.markdown("### 🧪 Evaluation Dashboard")
-    st.caption("Test suite covering hallucination, adversarial prompts, edge cases, and image safety")
+    st.caption("Covers hallucination, adversarial prompts, edge cases, and image safety")
 
-    tab1, tab2, tab3 = st.tabs(["📋 Dataset", "🏃 Run Moderation Eval", "📊 Results"])
+    tab1, tab2, tab3 = st.tabs(["📋 Dataset", "🏃 Run Eval", "📊 Architecture"])
 
     with tab1:
         category = st.selectbox(
@@ -472,49 +559,65 @@ elif st.session_state.tool_mode == "🧪 Eval Dashboard":
 
     with tab2:
         st.markdown("Run the automated moderation layer against known-bad inputs.")
-        st.caption("Tests adversarial prompts + image prompts against pattern-based moderation.")
-
         if st.button("▶️ Run Moderation Eval", type="primary"):
             with st.spinner("Running evaluations..."):
                 results = run_moderation_eval()
-
             total     = results["pass"] + results["fail"]
             pass_rate = (results["pass"] / total * 100) if total > 0 else 0
-
             c1, c2, c3 = st.columns(3)
             c1.metric("Total Tests", total)
             c2.metric("Passed",      results["pass"])
             c3.metric("Pass Rate",   f"{pass_rate:.0f}%")
-
             st.progress(pass_rate / 100)
-            st.markdown("**Detailed results:**")
             for detail in results["details"]:
                 icon = "✅" if detail["passed"] else "❌"
-                st.markdown(f"{icon} **{detail['id']}** — `{detail['input_preview']}` → `{detail['result']}`")
+                st.markdown(
+                    f"{icon} **{detail['id']}** — "
+                    f"`{detail['input_preview']}` → `{detail['result']}`"
+                )
 
     with tab3:
-        st.markdown("### Architecture Summary")
+        st.markdown("### System Architecture")
         st.markdown("""
-**Hallucination Prevention**
-- System prompt explicitly forbids fabricating verse references
-- `verify_verse_claim()` powered by gpt-4o-mini with temperature=0 for factual precision
-- Structural validation (book name lookup) catches impossible references
-- Model instructed to distinguish: direct quote / paraphrase / interpretation
+```
+User Input
+    ↓
+Moderation Layer          ← regex patterns, instant, no API call
+    ↓
+Fake Reference Detector   ← validate_book_name() against full book list
+    ↓
+Scripture Retrieval       ← local bible.json dataset (50 key verses)
+    │                        keyword + topic scoring, no LLM needed
+    ↓
+Prompt Assembly           ← retrieved verses injected into system prompt
+    │                        LLM instructed: use ONLY these verses
+    ↓
+gpt-4o-mini               ← explains/discusses grounded in real text
+    ↓
+Post-processing           ← extract cited references → BibleGateway links
+    ↓
+Response
+```
 
-**Safety Layers (in order)**
-1. **Pre-flight**: Regex pattern matching — instant, free, no API call
-2. **Prompt engineering**: System prompt with safety addendum on every LangChain call
-3. **Semantic router**: Difficult theology keywords → `handle_difficult_theology()` two-pass
-4. **Image safety**: Separate image moderation + gpt-4o-mini prompt rewriting
-5. **Post-generation**: Verse reference extraction + BibleGateway links for verification
+**Hallucination Prevention (3 layers)**
+1. Fake book detection — "Hezekiah 4:11" blocked before LLM call
+2. Local dataset grounding — LLM given actual verse text, told not to invent
+3. Verse verifier — checks local dataset first, then LLM at temperature=0
 
-**Denomination Awareness**
-- 7 denominations with distinct theological notes and preferred translations
-- Deuterocanonical books context for Catholic/Orthodox
-- Caution flag passed to system prompt for sensitive interactions
+**Image Pipeline**
+```
+User Prompt → Image Moderation → gpt-4o-mini Prompt Rewriter
+    → Stability AI (primary) → Pollinations (fallback) → Display
+```
 
-**Model**
-- All LLM calls: `gpt-4o-mini` via LangChain `ChatOpenAI`
-- Verse verifier uses `temperature=0` for factual accuracy
-- Two-pass difficult theology uses `temperature=0.5` for nuanced but stable output
+**Safety Layers**
+1. Pre-flight regex moderation (instant)
+2. Grounded system prompt on every call
+3. Difficult theology router (suffering, theodicy, etc.)
+4. Separate image safety check
+5. Post-generation verse validation + external links
+
+**Denomination Support**
+7 traditions: General, Protestant, Catholic, Orthodox, Reformed, Baptist, Lutheran
+Deuterocanonical books included for Catholic/Orthodox context
         """)

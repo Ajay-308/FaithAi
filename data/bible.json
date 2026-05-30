@@ -1,0 +1,918 @@
+{
+  "verses": {
+    "John 3:16": {
+      "text": "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+      "topics": [
+        "salvation",
+        "love",
+        "eternal life",
+        "God's love",
+        "belief",
+        "faith"
+      ],
+      "book": "John",
+      "chapter": 3,
+      "verse": 16,
+      "testament": "new"
+    },
+    "Romans 8:28": {
+      "text": "And we know that in all things God works for the good of those who love him, who have been called according to his purpose.",
+      "topics": [
+        "suffering",
+        "purpose",
+        "God's plan",
+        "providence",
+        "hope",
+        "trials"
+      ],
+      "book": "Romans",
+      "chapter": 8,
+      "verse": 28,
+      "testament": "new"
+    },
+    "Philippians 4:6": {
+      "text": "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.",
+      "topics": [
+        "anxiety",
+        "prayer",
+        "peace",
+        "worry",
+        "trust",
+        "thanksgiving"
+      ],
+      "book": "Philippians",
+      "chapter": 4,
+      "verse": 6,
+      "testament": "new"
+    },
+    "Philippians 4:7": {
+      "text": "And the peace of God, which transcends all understanding, will guard your hearts and your minds in Christ Jesus.",
+      "topics": [
+        "anxiety",
+        "peace",
+        "prayer",
+        "worry",
+        "mind",
+        "heart",
+        "comfort"
+      ],
+      "book": "Philippians",
+      "chapter": 4,
+      "verse": 7,
+      "testament": "new"
+    },
+    "Matthew 6:25": {
+      "text": "Therefore I tell you, do not worry about your life, what you will eat or drink; or about your body, what you will wear. Is not life more than food, and the body more than clothes?",
+      "topics": [
+        "anxiety",
+        "worry",
+        "trust",
+        "provision",
+        "faith",
+        "daily life"
+      ],
+      "book": "Matthew",
+      "chapter": 6,
+      "verse": 25,
+      "testament": "new"
+    },
+    "Matthew 6:33": {
+      "text": "But seek first his kingdom and his righteousness, and all these things will be given to you as well.",
+      "topics": [
+        "kingdom",
+        "righteousness",
+        "priority",
+        "provision",
+        "trust",
+        "worry"
+      ],
+      "book": "Matthew",
+      "chapter": 6,
+      "verse": 33,
+      "testament": "new"
+    },
+    "1 Peter 5:7": {
+      "text": "Cast all your anxiety on him because he cares for you.",
+      "topics": [
+        "anxiety",
+        "worry",
+        "God's care",
+        "trust",
+        "surrender",
+        "comfort"
+      ],
+      "book": "1 Peter",
+      "chapter": 5,
+      "verse": 7,
+      "testament": "new"
+    },
+    "Jeremiah 29:11": {
+      "text": "For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, plans to give you hope and a future.",
+      "topics": [
+        "purpose",
+        "hope",
+        "future",
+        "God's plan",
+        "prosperity",
+        "promise"
+      ],
+      "book": "Jeremiah",
+      "chapter": 29,
+      "verse": 11,
+      "testament": "old"
+    },
+    "Psalm 23:1": {
+      "text": "The Lord is my shepherd, I lack nothing.",
+      "topics": [
+        "provision",
+        "shepherd",
+        "trust",
+        "God's care",
+        "comfort",
+        "sufficiency"
+      ],
+      "book": "Psalms",
+      "chapter": 23,
+      "verse": 1,
+      "testament": "old"
+    },
+    "Psalm 23:4": {
+      "text": "Even though I walk through the darkest valley, I will fear no evil, for you are with me; your rod and your staff, they comfort me.",
+      "topics": [
+        "suffering",
+        "fear",
+        "comfort",
+        "God's presence",
+        "death",
+        "trials",
+        "shepherd"
+      ],
+      "book": "Psalms",
+      "chapter": 23,
+      "verse": 4,
+      "testament": "old"
+    },
+    "Psalm 46:1": {
+      "text": "God is our refuge and strength, an ever-present help in trouble.",
+      "topics": [
+        "refuge",
+        "strength",
+        "trouble",
+        "help",
+        "comfort",
+        "trials",
+        "crisis"
+      ],
+      "book": "Psalms",
+      "chapter": 46,
+      "verse": 1,
+      "testament": "old"
+    },
+    "Isaiah 40:31": {
+      "text": "But those who hope in the Lord will renew their strength. They will soar on wings like eagles; they will run and not grow weary, they will walk and not be faint.",
+      "topics": [
+        "hope",
+        "strength",
+        "renewal",
+        "endurance",
+        "weakness",
+        "trust",
+        "waiting"
+      ],
+      "book": "Isaiah",
+      "chapter": 40,
+      "verse": 31,
+      "testament": "old"
+    },
+    "Isaiah 41:10": {
+      "text": "So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you; I will uphold you with my righteous right hand.",
+      "topics": [
+        "fear",
+        "comfort",
+        "strength",
+        "God's presence",
+        "help",
+        "anxiety",
+        "courage"
+      ],
+      "book": "Isaiah",
+      "chapter": 41,
+      "verse": 10,
+      "testament": "old"
+    },
+    "John 1:1": {
+      "text": "In the beginning was the Word, and the Word was with God, and the Word was God.",
+      "topics": [
+        "Trinity",
+        "Jesus",
+        "divinity",
+        "creation",
+        "Word",
+        "God",
+        "beginning"
+      ],
+      "book": "John",
+      "chapter": 1,
+      "verse": 1,
+      "testament": "new"
+    },
+    "John 1:14": {
+      "text": "The Word became flesh and made his dwelling among us. We have seen his glory, the glory of the one and only Son, who came from the Father, full of grace and truth.",
+      "topics": [
+        "incarnation",
+        "Trinity",
+        "Jesus",
+        "grace",
+        "truth",
+        "glory",
+        "Word"
+      ],
+      "book": "John",
+      "chapter": 1,
+      "verse": 14,
+      "testament": "new"
+    },
+    "Matthew 28:19": {
+      "text": "Therefore go and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit.",
+      "topics": [
+        "Trinity",
+        "baptism",
+        "mission",
+        "discipleship",
+        "Great Commission",
+        "Father Son Holy Spirit"
+      ],
+      "book": "Matthew",
+      "chapter": 28,
+      "verse": 19,
+      "testament": "new"
+    },
+    "Romans 3:23": {
+      "text": "For all have sinned and fall short of the glory of God.",
+      "topics": [
+        "sin",
+        "salvation",
+        "humanity",
+        "glory",
+        "fallen nature",
+        "depravity"
+      ],
+      "book": "Romans",
+      "chapter": 3,
+      "verse": 23,
+      "testament": "new"
+    },
+    "Romans 6:23": {
+      "text": "For the wages of sin is death, but the gift of God is eternal life in Christ Jesus our Lord.",
+      "topics": ["sin", "death", "eternal life", "salvation", "grace", "gift"],
+      "book": "Romans",
+      "chapter": 6,
+      "verse": 23,
+      "testament": "new"
+    },
+    "Ephesians 2:8": {
+      "text": "For it is by grace you have been saved, through faith—and this is not from yourselves, it is the gift of God.",
+      "topics": [
+        "grace",
+        "salvation",
+        "faith",
+        "gift",
+        "not by works",
+        "sola fide"
+      ],
+      "book": "Ephesians",
+      "chapter": 2,
+      "verse": 8,
+      "testament": "new"
+    },
+    "Ephesians 2:9": {
+      "text": "Not by works, so that no one can boast.",
+      "topics": [
+        "works",
+        "grace",
+        "salvation",
+        "faith",
+        "boasting",
+        "sola fide"
+      ],
+      "book": "Ephesians",
+      "chapter": 2,
+      "verse": 9,
+      "testament": "new"
+    },
+    "John 14:6": {
+      "text": "Jesus answered, I am the way and the truth and the life. No one comes to the Father except through me.",
+      "topics": [
+        "salvation",
+        "Jesus",
+        "truth",
+        "life",
+        "exclusivity",
+        "way",
+        "Father"
+      ],
+      "book": "John",
+      "chapter": 14,
+      "verse": 6,
+      "testament": "new"
+    },
+    "John 11:25": {
+      "text": "Jesus said to her, I am the resurrection and the life. The one who believes in me will live, even though they die.",
+      "topics": [
+        "resurrection",
+        "eternal life",
+        "death",
+        "belief",
+        "afterlife",
+        "Easter"
+      ],
+      "book": "John",
+      "chapter": 11,
+      "verse": 25,
+      "testament": "new"
+    },
+    "Romans 8:38": {
+      "text": "For I am convinced that neither death nor life, neither angels nor demons, neither the present nor the future, nor any powers, neither height nor depth, nor anything else in all creation, will be able to separate us from the love of God that is in Christ Jesus our Lord.",
+      "topics": [
+        "love",
+        "assurance",
+        "salvation",
+        "eternal security",
+        "God's love",
+        "separation"
+      ],
+      "book": "Romans",
+      "chapter": 8,
+      "verse": 38,
+      "testament": "new"
+    },
+    "Proverbs 3:5": {
+      "text": "Trust in the Lord with all your heart and lean not on your own understanding.",
+      "topics": [
+        "trust",
+        "wisdom",
+        "heart",
+        "understanding",
+        "faith",
+        "surrender"
+      ],
+      "book": "Proverbs",
+      "chapter": 3,
+      "verse": 5,
+      "testament": "old"
+    },
+    "Proverbs 3:6": {
+      "text": "In all your ways submit to him, and he will make your paths straight.",
+      "topics": [
+        "trust",
+        "guidance",
+        "submission",
+        "direction",
+        "obedience",
+        "path"
+      ],
+      "book": "Proverbs",
+      "chapter": 3,
+      "verse": 6,
+      "testament": "old"
+    },
+    "Matthew 5:3": {
+      "text": "Blessed are the poor in spirit, for theirs is the kingdom of heaven.",
+      "topics": [
+        "beatitudes",
+        "kingdom",
+        "humility",
+        "blessing",
+        "Sermon on the Mount"
+      ],
+      "book": "Matthew",
+      "chapter": 5,
+      "verse": 3,
+      "testament": "new"
+    },
+    "Matthew 5:4": {
+      "text": "Blessed are those who mourn, for they will be comforted.",
+      "topics": [
+        "beatitudes",
+        "mourning",
+        "comfort",
+        "blessing",
+        "grief",
+        "Sermon on the Mount"
+      ],
+      "book": "Matthew",
+      "chapter": 5,
+      "verse": 4,
+      "testament": "new"
+    },
+    "Matthew 22:37": {
+      "text": "Jesus replied: Love the Lord your God with all your heart and with all your soul and with all your mind.",
+      "topics": [
+        "love",
+        "commandment",
+        "heart",
+        "soul",
+        "mind",
+        "God",
+        "greatest commandment"
+      ],
+      "book": "Matthew",
+      "chapter": 22,
+      "verse": 37,
+      "testament": "new"
+    },
+    "Matthew 22:39": {
+      "text": "And the second is like it: Love your neighbor as yourself.",
+      "topics": [
+        "love",
+        "neighbor",
+        "commandment",
+        "ethics",
+        "golden rule",
+        "greatest commandment"
+      ],
+      "book": "Matthew",
+      "chapter": 22,
+      "verse": 39,
+      "testament": "new"
+    },
+    "John 13:34": {
+      "text": "A new command I give you: Love one another. As I have loved you, so you must love one another.",
+      "topics": [
+        "love",
+        "commandment",
+        "community",
+        "discipleship",
+        "new commandment"
+      ],
+      "book": "John",
+      "chapter": 13,
+      "verse": 34,
+      "testament": "new"
+    },
+    "1 Corinthians 13:4": {
+      "text": "Love is patient, love is kind. It does not envy, it does not boast, it is not proud.",
+      "topics": [
+        "love",
+        "patience",
+        "kindness",
+        "marriage",
+        "relationships",
+        "charity"
+      ],
+      "book": "1 Corinthians",
+      "chapter": 13,
+      "verse": 4,
+      "testament": "new"
+    },
+    "1 Corinthians 13:13": {
+      "text": "And now these three remain: faith, hope and love. But the greatest of these is love.",
+      "topics": ["love", "faith", "hope", "virtues", "greatest", "charity"],
+      "book": "1 Corinthians",
+      "chapter": 13,
+      "verse": 13,
+      "testament": "new"
+    },
+    "Genesis 1:1": {
+      "text": "In the beginning God created the heavens and the earth.",
+      "topics": [
+        "creation",
+        "God",
+        "beginning",
+        "universe",
+        "Genesis",
+        "origin"
+      ],
+      "book": "Genesis",
+      "chapter": 1,
+      "verse": 1,
+      "testament": "old"
+    },
+    "Genesis 1:27": {
+      "text": "So God created mankind in his own image, in the image of God he created them; male and female he created them.",
+      "topics": [
+        "creation",
+        "humanity",
+        "image of God",
+        "imago dei",
+        "gender",
+        "dignity"
+      ],
+      "book": "Genesis",
+      "chapter": 1,
+      "verse": 27,
+      "testament": "old"
+    },
+    "Job 1:21": {
+      "text": "The Lord gave and the Lord has taken away; may the name of the Lord be praised.",
+      "topics": [
+        "suffering",
+        "Job",
+        "loss",
+        "praise",
+        "surrender",
+        "theodicy",
+        "trials"
+      ],
+      "book": "Job",
+      "chapter": 1,
+      "verse": 21,
+      "testament": "old"
+    },
+    "James 1:2": {
+      "text": "Consider it pure joy, my brothers and sisters, whenever you face trials of many kinds.",
+      "topics": [
+        "suffering",
+        "trials",
+        "joy",
+        "perseverance",
+        "testing",
+        "faith"
+      ],
+      "book": "James",
+      "chapter": 1,
+      "verse": 2,
+      "testament": "new"
+    },
+    "James 1:3": {
+      "text": "Because you know that the testing of your faith produces perseverance.",
+      "topics": [
+        "suffering",
+        "trials",
+        "perseverance",
+        "faith",
+        "testing",
+        "growth"
+      ],
+      "book": "James",
+      "chapter": 1,
+      "verse": 3,
+      "testament": "new"
+    },
+    "Hebrews 11:1": {
+      "text": "Now faith is confidence in what we hope for and assurance about what we do not see.",
+      "topics": ["faith", "hope", "assurance", "belief", "trust", "unseen"],
+      "book": "Hebrews",
+      "chapter": 11,
+      "verse": 1,
+      "testament": "new"
+    },
+    "2 Timothy 3:16": {
+      "text": "All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness.",
+      "topics": [
+        "scripture",
+        "inspiration",
+        "Bible",
+        "teaching",
+        "authority",
+        "Word of God"
+      ],
+      "book": "2 Timothy",
+      "chapter": 3,
+      "verse": 16,
+      "testament": "new"
+    },
+    "Acts 2:38": {
+      "text": "Peter replied, Repent and be baptized, every one of you, in the name of Jesus Christ for the forgiveness of your sins. And you will receive the gift of the Holy Spirit.",
+      "topics": [
+        "baptism",
+        "repentance",
+        "Holy Spirit",
+        "forgiveness",
+        "salvation",
+        "Pentecost"
+      ],
+      "book": "Acts",
+      "chapter": 2,
+      "verse": 38,
+      "testament": "new"
+    },
+    "Luke 15:11": {
+      "text": "Jesus continued: There was a man who had two sons.",
+      "topics": [
+        "prodigal son",
+        "parable",
+        "forgiveness",
+        "father",
+        "return",
+        "grace"
+      ],
+      "book": "Luke",
+      "chapter": 15,
+      "verse": 11,
+      "testament": "new"
+    },
+    "Luke 15:20": {
+      "text": "So he got up and went to his father. But while he was still a long way off, his father saw him and was filled with compassion for him; he ran to his son, threw his arms around him and kissed him.",
+      "topics": [
+        "prodigal son",
+        "forgiveness",
+        "father",
+        "compassion",
+        "return",
+        "grace",
+        "reconciliation"
+      ],
+      "book": "Luke",
+      "chapter": 15,
+      "verse": 20,
+      "testament": "new"
+    },
+    "Matthew 6:9": {
+      "text": "This, then, is how you should pray: Our Father in heaven, hallowed be your name.",
+      "topics": [
+        "prayer",
+        "Lord's Prayer",
+        "Our Father",
+        "worship",
+        "God's name",
+        "teaching on prayer"
+      ],
+      "book": "Matthew",
+      "chapter": 6,
+      "verse": 9,
+      "testament": "new"
+    },
+    "Revelation 21:4": {
+      "text": "He will wipe every tear from their eyes. There will be no more death or mourning or crying or pain, for the old order of things has passed away.",
+      "topics": [
+        "heaven",
+        "afterlife",
+        "new creation",
+        "hope",
+        "death",
+        "suffering",
+        "restoration",
+        "eschatology"
+      ],
+      "book": "Revelation",
+      "chapter": 21,
+      "verse": 4,
+      "testament": "new"
+    },
+    "John 10:10": {
+      "text": "The thief comes only to steal and kill and destroy; I have come that they may have life, and have it to the full.",
+      "topics": [
+        "abundant life",
+        "purpose",
+        "evil",
+        "Satan",
+        "life",
+        "fullness"
+      ],
+      "book": "John",
+      "chapter": 10,
+      "verse": 10,
+      "testament": "new"
+    },
+    "Matthew 11:28": {
+      "text": "Come to me, all you who are weary and burdened, and I will give you rest.",
+      "topics": [
+        "rest",
+        "weariness",
+        "burden",
+        "comfort",
+        "invitation",
+        "peace",
+        "anxiety"
+      ],
+      "book": "Matthew",
+      "chapter": 11,
+      "verse": 28,
+      "testament": "new"
+    },
+    "Galatians 5:22": {
+      "text": "But the fruit of the Spirit is love, joy, peace, forbearance, kindness, goodness, faithfulness.",
+      "topics": [
+        "Holy Spirit",
+        "fruit of the Spirit",
+        "virtues",
+        "character",
+        "love",
+        "joy",
+        "peace"
+      ],
+      "book": "Galatians",
+      "chapter": 5,
+      "verse": 22,
+      "testament": "new"
+    },
+    "Galatians 5:23": {
+      "text": "Gentleness and self-control. Against such things there is no law.",
+      "topics": [
+        "Holy Spirit",
+        "fruit of the Spirit",
+        "gentleness",
+        "self-control",
+        "character"
+      ],
+      "book": "Galatians",
+      "chapter": 5,
+      "verse": 23,
+      "testament": "new"
+    },
+    "Romans 12:2": {
+      "text": "Do not conform to the pattern of this world, but be transformed by the renewing of your mind. Then you will be able to test and approve what God's will is—his good, pleasing and perfect will.",
+      "topics": [
+        "transformation",
+        "mind",
+        "world",
+        "God's will",
+        "renewal",
+        "sanctification"
+      ],
+      "book": "Romans",
+      "chapter": 12,
+      "verse": 2,
+      "testament": "new"
+    },
+    "Micah 6:8": {
+      "text": "He has shown you, O mortal, what is good. And what does the Lord require of you? To act justly and to love mercy and to walk humbly with your God.",
+      "topics": [
+        "justice",
+        "mercy",
+        "humility",
+        "ethics",
+        "requirements",
+        "justice",
+        "social justice"
+      ],
+      "book": "Micah",
+      "chapter": 6,
+      "verse": 8,
+      "testament": "old"
+    },
+    "Psalm 119:105": {
+      "text": "Your word is a lamp for my feet, a light on my path.",
+      "topics": [
+        "scripture",
+        "guidance",
+        "Word of God",
+        "light",
+        "direction",
+        "Bible"
+      ],
+      "book": "Psalms",
+      "chapter": 119,
+      "verse": 105,
+      "testament": "old"
+    },
+    "1 John 1:9": {
+      "text": "If we confess our sins, he is faithful and just and will forgive us our sins and purify us from all unrighteousness.",
+      "topics": [
+        "confession",
+        "forgiveness",
+        "sin",
+        "purification",
+        "faithfulness",
+        "cleansing"
+      ],
+      "book": "1 John",
+      "chapter": 1,
+      "verse": 9,
+      "testament": "new"
+    }
+  },
+
+  "books": {
+    "old_testament": [
+      "Genesis",
+      "Exodus",
+      "Leviticus",
+      "Numbers",
+      "Deuteronomy",
+      "Joshua",
+      "Judges",
+      "Ruth",
+      "1 Samuel",
+      "2 Samuel",
+      "1 Kings",
+      "2 Kings",
+      "1 Chronicles",
+      "2 Chronicles",
+      "Ezra",
+      "Nehemiah",
+      "Esther",
+      "Job",
+      "Psalms",
+      "Proverbs",
+      "Ecclesiastes",
+      "Song of Solomon",
+      "Isaiah",
+      "Jeremiah",
+      "Lamentations",
+      "Ezekiel",
+      "Daniel",
+      "Hosea",
+      "Joel",
+      "Amos",
+      "Obadiah",
+      "Jonah",
+      "Micah",
+      "Nahum",
+      "Habakkuk",
+      "Zephaniah",
+      "Haggai",
+      "Zechariah",
+      "Malachi"
+    ],
+    "new_testament": [
+      "Matthew",
+      "Mark",
+      "Luke",
+      "John",
+      "Acts",
+      "Romans",
+      "1 Corinthians",
+      "2 Corinthians",
+      "Galatians",
+      "Ephesians",
+      "Philippians",
+      "Colossians",
+      "1 Thessalonians",
+      "2 Thessalonians",
+      "1 Timothy",
+      "2 Timothy",
+      "Titus",
+      "Philemon",
+      "Hebrews",
+      "James",
+      "1 Peter",
+      "2 Peter",
+      "1 John",
+      "2 John",
+      "3 John",
+      "Jude",
+      "Revelation"
+    ],
+    "deuterocanonical": [
+      "Tobit",
+      "Judith",
+      "1 Maccabees",
+      "2 Maccabees",
+      "Wisdom of Solomon",
+      "Sirach",
+      "Baruch"
+    ]
+  },
+
+  "topic_index": {
+    "anxiety": [
+      "Philippians 4:6",
+      "Philippians 4:7",
+      "Matthew 6:25",
+      "Matthew 6:33",
+      "1 Peter 5:7",
+      "Isaiah 41:10",
+      "Matthew 11:28"
+    ],
+    "suffering": [
+      "Romans 8:28",
+      "Psalm 23:4",
+      "Job 1:21",
+      "James 1:2",
+      "James 1:3",
+      "Revelation 21:4",
+      "Psalm 46:1"
+    ],
+    "salvation": [
+      "John 3:16",
+      "Romans 3:23",
+      "Romans 6:23",
+      "Ephesians 2:8",
+      "Ephesians 2:9",
+      "John 14:6"
+    ],
+    "love": [
+      "John 3:16",
+      "Romans 8:38",
+      "Matthew 22:37",
+      "Matthew 22:39",
+      "John 13:34",
+      "1 Corinthians 13:4",
+      "1 Corinthians 13:13"
+    ],
+    "prayer": ["Philippians 4:6", "Matthew 6:9", "1 Peter 5:7"],
+    "Trinity": ["John 1:1", "John 1:14", "Matthew 28:19"],
+    "faith": ["Hebrews 11:1", "Ephesians 2:8", "Romans 8:28", "James 1:2"],
+    "hope": [
+      "Jeremiah 29:11",
+      "Romans 8:28",
+      "Isaiah 40:31",
+      "Revelation 21:4"
+    ],
+    "forgiveness": ["1 John 1:9", "Luke 15:20", "Ephesians 2:8"],
+    "creation": ["Genesis 1:1", "Genesis 1:27"],
+    "scripture": ["2 Timothy 3:16", "Psalm 119:105"],
+    "resurrection": ["John 11:25", "Revelation 21:4"],
+    "Holy Spirit": ["Galatians 5:22", "Galatians 5:23", "Acts 2:38"],
+    "purpose": ["Jeremiah 29:11", "Romans 8:28", "John 10:10"],
+    "heaven": ["Revelation 21:4", "John 11:25", "John 3:16"],
+    "sin": ["Romans 3:23", "Romans 6:23", "1 John 1:9"],
+    "trust": ["Proverbs 3:5", "Proverbs 3:6", "Isaiah 40:31", "Psalm 23:1"],
+    "comfort": ["Psalm 23:4", "Matthew 11:28", "Isaiah 41:10", "Psalm 46:1"],
+    "justice": ["Micah 6:8"],
+    "baptism": ["Acts 2:38", "Matthew 28:19"],
+    "afterlife": ["Revelation 21:4", "John 11:25", "John 3:16"]
+  }
+}
