@@ -28,7 +28,7 @@ from retrieval.scripture_retrival import (
     get_verse,
 )
 
-# ── Model setup ───────────────────────────────────────────────────────────────
+#  Model setup 
 
 _llm = ChatOpenAI(
     model="gpt-4o-mini",
@@ -42,7 +42,7 @@ _llm_precise = ChatOpenAI(
     openai_api_key=os.getenv("OPENAI_API_KEY"),
 )
 
-# ── System prompts ────────────────────────────────────────────────────────────
+#  System prompts 
 
 _BASE_SYSTEM = """You are a knowledgeable, respectful, and pastoral Christian AI assistant.
 
@@ -64,7 +64,7 @@ HALLUCINATION PREVENTION:
 """
 
 
-# ── Main chat function ────────────────────────────────────────────────────────
+#  Main chat function 
 
 def chat(
     messages: list[dict],
@@ -87,16 +87,16 @@ def chat(
             latest_user_msg = m["content"]
             break
 
-    # ── Step 1: Check for fake book references ────────────────────────────────
+    #  Step 1: Check for fake book references 
     fake_ref = _detect_fake_reference(latest_user_msg)
     if fake_ref:
         return fake_ref
 
-    # ── Step 2: Retrieve scripture context ────────────────────────────────────
+    #  Step 2: Retrieve scripture context 
     retrieved = retrieve_scripture_context(latest_user_msg, top_k=4)
     context_block = format_context_block(retrieved) if retrieved else ""
 
-    # ── Step 3: Build system prompt ───────────────────────────────────────────
+    #  Step 3: Build system prompt ─
     denom_note = _get_denomination_note(denomination)
     caution_note = "\nThis is a sensitive topic. Respond with extra pastoral care and compassion." if caution else ""
 
@@ -107,7 +107,7 @@ def chat(
         system_content += "\n\nNo specific scripture has been retrieved for this query. Discuss the theme thoughtfully but do not fabricate verse references."
     system_content += denom_note + caution_note
 
-    # ── Step 4: Build message history ─────────────────────────────────────────
+    #  Step 4: Build message history ─
     lc_messages = [SystemMessage(content=system_content)]
     for m in messages[:-1]:   # all but last (latest already captured)
         if m["role"] == "user":
@@ -120,7 +120,7 @@ def chat(
     return response.content
 
 
-# ── Difficult theology ────────────────────────────────────────────────────────
+#  Difficult theology 
 
 def handle_difficult_theology(question: str, denomination: str = "general") -> str:
     """
@@ -156,7 +156,7 @@ This is a theologically difficult question. Your response must:
     return response.content
 
 
-# ── Content generation ────────────────────────────────────────────────────────
+#  Content generation 
 
 def generate_christian_content(
     content_type: str,
@@ -203,14 +203,14 @@ If you reference a verse, quote it accurately from the context provided.
     return response.content
 
 
-# ── Verse verification ────────────────────────────────────────────────────────
+#  Verse verification 
 
 def verify_verse_claim(reference: str, claimed_text: str) -> dict:
     """
     Verify whether a verse reference and text are accurate.
     First checks local dataset, then uses LLM with temperature=0.
     """
-    # ── Step 1: Check local dataset first ────────────────────────────────────
+    #  Step 1: Check local dataset first 
     local_verse = get_verse(reference)
     if local_verse:
         actual_text   = local_verse["text"]
@@ -223,7 +223,7 @@ def verify_verse_claim(reference: str, claimed_text: str) -> dict:
             "notes":            "Verified from local Bible dataset (NIV).",
         }
 
-    # ── Step 2: Check if book exists at all ───────────────────────────────────
+    #  Step 2: Check if book exists at all ─
     parts     = reference.strip().rsplit(" ", 1)
     book_name = parts[0] if len(parts) == 2 else reference
     valid_book, book_msg = validate_book_name(book_name)
@@ -236,7 +236,7 @@ def verify_verse_claim(reference: str, claimed_text: str) -> dict:
             "notes":            book_msg,
         }
 
-    # ── Step 3: Book exists but verse not in local dataset → ask LLM ─────────
+    #  Step 3: Book exists but verse not in local dataset → ask LLM ─
     system = """You are a Bible fact-checker. Be precise and honest.
 If you are not certain, say so. Do NOT invent verse text.
 Respond in JSON with keys:
@@ -271,7 +271,7 @@ Respond in JSON with keys:
         }
 
 
-# ── Image prompt rewriter ─────────────────────────────────────────────────────
+#  Image prompt rewriter ─
 
 def generate_image_prompt(user_request: str, denomination: str = "general") -> str:
     """
@@ -291,7 +291,7 @@ Return ONLY the rewritten prompt, no explanation."""
     return response.content.strip()
 
 
-# ── Internal helpers ──────────────────────────────────────────────────────────
+#  Internal helpers 
 
 def _detect_fake_reference(query: str) -> str | None:
     """

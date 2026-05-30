@@ -16,7 +16,7 @@ from enum import Enum
 import re
 
 
-# ── Risk levels ───────────────────────────────────────────────────────────────
+#  Risk levels ─
 
 class RiskLevel(Enum):
     SAFE    = "safe"
@@ -31,7 +31,7 @@ class ModerationResult:
     suggested_response: str       # user-facing message (only shown on BLOCK)
 
 
-# ── Keyword lists ─────────────────────────────────────────────────────────────
+#  Keyword lists ─
 
 _BLOCK_PATTERNS = [
     r"\b(make|build|create|generate)\b.{0,30}\b(bomb|weapon|explosive|poison|virus|malware)\b",
@@ -62,7 +62,7 @@ _IMAGE_BLOCK_PATTERNS = [
 ]
 
 
-# ── Moderation functions ──────────────────────────────────────────────────────
+#  Moderation functions 
 
 def _matches_any(text: str, patterns: list[str]) -> str | None:
     """Return the first matching pattern label, or None."""
@@ -147,7 +147,7 @@ def moderate_image_prompt(text: str) -> ModerationResult:
     )
 
 
-# ── System prompt safety addendum ─────────────────────────────────────────────
+#  System prompt safety addendum ─
 
 SYSTEM_PROMPT_SAFETY_ADDENDUM = """
 SAFETY GUIDELINES:

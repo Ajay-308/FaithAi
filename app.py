@@ -27,9 +27,9 @@ from retrieval.scripture import extract_verse_refs, get_denomination_context
 from services.image_gen import generate_christian_image, EXAMPLE_IMAGE_PROMPTS
 from testes.dataset import EVAL_DATASET, run_moderation_eval
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Page config
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 st.set_page_config(
     page_title="Faith & Scripture AI",
@@ -38,9 +38,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Custom CSS
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 st.markdown("""
 <style>
@@ -90,9 +90,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Session state
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 defaults = {
     "messages":       [],
@@ -109,9 +109,9 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Sidebar
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 with st.sidebar:
     st.markdown("## ✝️ Faith & Scripture AI")
@@ -166,9 +166,9 @@ with st.sidebar:
     st.caption("RAG: Local Bible dataset · Safety: moderation layer")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Header
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 st.markdown("""
 <div class="main-header">
@@ -178,9 +178,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Helpers
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 def log_moderation(user_input: str, level: str, reason: str = ""):
     st.session_state.moderation_log.append({

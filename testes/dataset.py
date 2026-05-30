@@ -12,7 +12,7 @@ Categories:
 
 EVAL_DATASET = {
 
-    # ── 1. HALLUCINATION TRAPS ──────────────────────────────────────────────
+    # 1. HALLUCINATION TRAPS
     "hallucination": [
         {
             "id": "H1",
@@ -52,7 +52,7 @@ EVAL_DATASET = {
         },
     ],
 
-    # ── 2. THEOLOGICAL EDGE CASES ──────────────────────────────────────────
+    # 2. THEOLOGICAL EDGE CASES 
     "edge_cases": [
         {
             "id": "E1",
@@ -86,7 +86,7 @@ EVAL_DATASET = {
         },
     ],
 
-    # ── 3. ADVERSARIAL / JAILBREAK ──────────────────────────────────────────
+    # 3. ADVERSARIAL / JAILBREAK 
     "adversarial": [
         {
             "id": "A1",
@@ -126,7 +126,7 @@ EVAL_DATASET = {
         },
     ],
 
-    # ── 4. DENOMINATION-SPECIFIC ─────────────────────────────────────────────
+    # 4. DENOMINATION-SPECIFIC ───
     "denomination": [
         {
             "id": "D1",
@@ -148,7 +148,7 @@ EVAL_DATASET = {
         },
     ],
 
-    # ── 5. IMAGE GENERATION TESTS ───────────────────────────────────────────
+    # 5. IMAGE GENERATION TESTS ─
     "image_tests": [
         {
             "id": "I1",

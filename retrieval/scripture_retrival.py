@@ -24,11 +24,8 @@ import os
 import re
 from typing import Optional
 
-# ── Load dataset once at import time ─────────────────────────────────────────
-# Project root
+# Load dataset once at import time
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# data/bible.json
 _DATA_PATH = os.path.join(PROJECT_ROOT, "data", "bible.json")
 
 with open(_DATA_PATH, "r", encoding="utf-8") as _f:
@@ -42,7 +39,7 @@ DEUTEROCANONICAL: list[str]   = _BIBLE_DATA["books"]["deuterocanonical"]
 ALL_BOOKS: set[str]           = set(OLD_TESTAMENT + NEW_TESTAMENT + DEUTEROCANONICAL)
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+# Public API───────────────────────
 
 def retrieve_scripture_context(query: str, top_k: int = 4) -> list[dict]:
     """
@@ -60,7 +57,7 @@ def retrieve_scripture_context(query: str, top_k: int = 4) -> list[dict]:
 
     query_lower = query.lower()
 
-    # ── Strategy 1: Direct reference lookup ──────────────────────────────────
+    # Strategy 1: Direct reference lookup ──────────────────────────────────
     direct_ref = _extract_direct_reference(query)
     if direct_ref:
         verse = VERSES.get(direct_ref)
@@ -70,7 +67,7 @@ def retrieve_scripture_context(query: str, top_k: int = 4) -> list[dict]:
             # Reference format looks valid but not in our dataset
             return []
 
-    # ── Strategy 2: Topic index lookup ────────────────────────────────────────
+    # Strategy 2: Topic index lookup ────────────────────────────────────────
     for topic, refs in TOPIC_INDEX.items():
         if topic.lower() in query_lower:
             for ref in refs:
@@ -78,7 +75,7 @@ def retrieve_scripture_context(query: str, top_k: int = 4) -> list[dict]:
                     results.append((2.0, ref))   # topic hits score higher
                     seen.add(ref)
 
-    # ── Strategy 3: Keyword scoring over all verses ───────────────────────────
+    # Strategy 3: Keyword scoring over all verses ───────────────────────────
     query_words = set(_tokenize(query_lower))
     stop_words  = {"what", "does", "the", "say", "about", "is", "are", "a", "an",
                    "in", "of", "for", "to", "and", "or", "how", "why", "me", "tell",
@@ -173,7 +170,7 @@ def get_all_topics() -> list[str]:
     return sorted(TOPIC_INDEX.keys())
 
 
-# ── Internal helpers ──────────────────────────────────────────────────────────
+# Internal helpers─────────────────
 
 def _extract_direct_reference(query: str) -> Optional[str]:
     """

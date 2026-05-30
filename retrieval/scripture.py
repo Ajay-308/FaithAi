@@ -7,7 +7,7 @@ No AI calls — pure data / regex.
 import re
 
 
-# ── Bible books ───────────────────────────────────────────────────────────────
+#  Bible books ─
 
 BIBLE_BOOKS = {
     "genesis", "exodus", "leviticus", "numbers", "deuteronomy",
@@ -28,7 +28,7 @@ BIBLE_BOOKS = {
 }
 
 
-# ── Denomination helpers ──────────────────────────────────────────────────────
+#  Denomination helpers 
 
 def get_translation_for_denomination(denomination: str = "general") -> str:
     mapping = {
@@ -80,7 +80,7 @@ def get_denomination_context(denomination: str = "general") -> str:
     return contexts.get(denomination.lower(), contexts["general"])
 
 
-# ── Verse reference extraction ────────────────────────────────────────────────
+#  Verse reference extraction 
 
 def extract_verse_refs(text: str) -> list[str]:
     """
@@ -99,7 +99,7 @@ def extract_verse_refs(text: str) -> list[str]:
     return refs
 
 
-# ── Verse structure validation ────────────────────────────────────────────────
+#  Verse structure validation 
 
 def validate_verse_ref(book: str, chapter: int, verse: int) -> tuple[bool, str]:
     """
