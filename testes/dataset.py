@@ -186,7 +186,7 @@ EVAL_DATASET = {
 
 def run_moderation_eval():
     """Quick evaluation runner for the moderation layer."""
-    from ..moderation import moderate_input, moderate_image_prompt, RiskLevel
+    from ..safety.moderation import moderate_input, moderate_image_prompt, RiskLevel
 
     results = {"pass": 0, "fail": 0, "details": []}
 
